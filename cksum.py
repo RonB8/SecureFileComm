@@ -4,7 +4,6 @@ python.
 
 The constants and routine are cribbed from the POSIX man page
 """
-import sys
 
 crctab = [ 0x00000000, 0x04c11db7, 0x09823b6e, 0x0d4326d9, 0x130476dc,
         0x17c56b6b, 0x1a864db2, 0x1e475005, 0x2608edb8, 0x22c9f00f,
@@ -74,7 +73,7 @@ def memcrc(b):
         s = UNSIGNED(s << 8) ^ crctab[(s >> 24) ^ c]
     return UNSIGNED(~s)
 
-def checksum(fname):
+def checksum(fname: str) -> int:
     try:
         buffer = open(fname, 'rb').read()
         return memcrc(buffer)
