@@ -1,14 +1,9 @@
 #pragma once
 
-#include "includeAll.hpp"
+#include "commonInc.hpp"
 #include <aes.h>
 #include <modes.h>
 #include <filters.h>
-
-
-
-
-
 #include <rsa.h>
 #include <osrng.h>
 #include <base64.h>
@@ -16,7 +11,6 @@
 #include <files.h>
 #include <secblock.h>
 #include <memory>
-
 
 
 class RSAKeys {
@@ -29,15 +23,11 @@ public:
     RSAKeys();
     RSAKeys(const std::vector<uint8_t>& inputPrivateKey);
 
- 
-
     std::vector<uint8_t> decrypt(const std::vector<uint8_t>& encryptedData);
     std::vector<uint8_t> getPublicKey()const;
     std::vector<uint8_t> exportPrivateKey() const;
 
 };
-
-
 
 
 class AESKey {
@@ -48,8 +38,6 @@ public:
     const std::vector<uint8_t> encrypt(const std::vector<uint8_t>& data)const;
     std::vector<uint8_t> decrypt(const std::vector<uint8_t>& data);
 };
-
-
 
 
 
