@@ -1,17 +1,10 @@
-//
-// Created by user on 10/15/2024.
-//
-
 #include "DataBase.hpp"
-
-
-
 
 
 DataBase::DataBase() {
     userInfoFile = "me.info";
     transferFile = "transfer.info";
-    privKeyFile = "pri.txt"; //@@@@@@@@@@@@@@@@@@@@@@@@@  back to 'priv.key'
+    privKeyFile = "priv.key";
 }
 
 bool DataBase::userExist() {
