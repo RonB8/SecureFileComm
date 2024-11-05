@@ -1,8 +1,5 @@
-//#include "common.hpp"
 #include "CodeFinals.hpp"
-//#include "Request.hpp"
-#include "Response.hpp"
-
+#include "ResponseParser.hpp"
 
 
 Response::Response(const std::vector<uint8_t>& packet)
@@ -18,11 +15,29 @@ Response& Response::operator=(const Response& other) {
     return *this;
 }
 
+uint8_t Response::getVersion() const {
+    return version;
+}
 
+uint16_t Response::getCode() const {
+    return code;
+}
+
+uint32_t Response::getPayloadSize() const {
+    return payloadSize;
+}
+
+const std::vector<uint8_t>& Response::getPayload() const {
+    return payload;
+}
+
+
+
+//Kוודא גודל וקטור
 /*inline */void Response::setPacket(const std::vector<uint8_t>& packet) {
     version = packet[0];
-    code = (packet[1] << 8) + packet[2];
-    payloadSize = (packet[3] << 24) + (packet[4] << 16) + (packet[5] << 8) + packet[6];
+    code = (packet[2] << 8) + packet[1];
+    payloadSize = (packet[6] << 24) + (packet[5] << 16) + (packet[4] << 8) + packet[3];
 
     // Ensure that the packet contains enough data for the payload
     if (packet.size() < static_cast<unsigned long long>(7) + payloadSize) {
@@ -68,38 +83,44 @@ std::vector<uint8_t> Response::getClientID() {
 
 std::vector<uint8_t> Response::getEncryptedSymmetricKey() {
     if (code != PUBLIC_KEY_RECEIVED && code != LOGIN_ACCEPT)
-        throw std::invalid_argument::invalid_argument(""); //To put something @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    
+        throw std::invalid_argument::invalid_argument("Invalid request code for retrieving encrypted symetric key.");
+
     return getSubPayload(16, payloadSize);
 }
 
-std::vector<uint8_t> Response::getContentSize() {
+uint32_t Response::getContentSize() {
     if (code != VALID_FILE_ACCEPTED)
-        throw std::invalid_argument::invalid_argument(""); //To put something @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        throw std::invalid_argument::invalid_argument("Invalid request code for retrieving content size.");
 
-    return getSubPayload(16, 20);
+    std::vector<uint8_t> temp = getSubPayload(16, 20);
+    uint32_t num = 0;
+    num += temp[3] << 24;
+    num += temp[2] << 16;
+    num += temp[1] << 8;
+    num += temp[0];
+
+    return num;
+
 }
 std::vector<uint8_t> Response::getFileName() {
     if (code != VALID_FILE_ACCEPTED)
-        throw std::invalid_argument::invalid_argument(""); //To put something @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        throw std::invalid_argument::invalid_argument("Invalid request code for retrieving file name.");
 
     return getSubPayload(20, 276);
 }
 
-std::vector<uint8_t> Response::getCksum() {
+
+uint32_t Response::getCksum() {
+
     if (code != VALID_FILE_ACCEPTED)
-        throw std::invalid_argument::invalid_argument(""); //To put something @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        throw std::invalid_argument::invalid_argument("Invalid request code for retrieving checksum.");
 
-    return getSubPayload(275, 279);
-}
-
-uint32_t Response::getCksumAsNum() {
-    std::vector<uint8_t> temp = getCksum();
+    std::vector<uint8_t> temp = getSubPayload(275, 279);
     uint32_t num = 0;
-    num += temp[0] << 24;
-    num += temp[1] << 16;
-    num += temp[2] << 8;
-    num += temp[3];
+    num += temp[3] << 24;
+    num += temp[2] << 16;
+    num += temp[1] << 8;
+    num += temp[0];
 
     return num;
 }
