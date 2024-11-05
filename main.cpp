@@ -1,17 +1,20 @@
 #include "DataBase.hpp"
 #include "Cloud.hpp"
-#include "Response.hpp"
+#include "ResponseParser.hpp"
 #include "CryptoManager.hpp"
 
+
+
 int main() {
-
-
 
     try {
 
     DataBase dataBase;
-    Cloud cloud1, cloud2, cloud3, cloud4;
-    Response response1, response2;
+    
+    Cloud cloud1;
+    
+    Response response1;
+
     CryptoManager cryptoManager;
     u_short port;
     std::string name, host, filePathStr;
@@ -30,10 +33,11 @@ int main() {
 
         cryptoManager.initRSAKeys();
         publicKey = cryptoManager.getPublicKey();
+
         privateKey = cryptoManager.getPrivateKey();
         privateKey1 = cryptoManager.getPrivateKey();
 
-        response2 = cloud1.sendPublicKey(name, cID, publicKey); //@@@@@@@@@@@
+        response1 = cloud1.sendPublicKey(name, cID, publicKey);
 
         //Storing User details
         dataBase.writeUserDetailsToFile(name, cID, privateKey);
@@ -46,10 +50,11 @@ int main() {
         dataBase.extractUserDetails(tName, cID, privateKey);
         dataBase.loadPrivateKey(privateKey1);
         cryptoManager.initRSAKeys(privateKey1);
-        response2 = cloud2.login(name, cID);
+        response1 = cloud1.login(name, cID);
     }
 
-    std::vector<uint8_t> encryptedAesKey = response2.getEncryptedSymmetricKey();
+
+    std::vector<uint8_t> encryptedAesKey = response1.getEncryptedSymmetricKey();
 
     cryptoManager.initAESKey(encryptedAesKey);    
     Response response4 = cloud1.sendFile(cID, filePath, cryptoManager);
