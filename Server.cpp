@@ -1,17 +1,6 @@
-//
-// Created by user on 10/15/2024.
-//
-
 #include "Server.hpp"
 #include "Request.hpp"
 
-Server::Server() {
-    //   initializeWinSock();
-}
-
-Server::~Server() {
-    //    disConnectSrv();
-}
 
 void Server::initializeWinSock() {
     //Initialize the winsock
@@ -61,15 +50,17 @@ void Server::disConnectSrv() {
 std::vector<uint8_t> Server::sendReq(const Request& req) {
     connectSrv();
 
-    std::vector<uint8_t> dataBytes = Request::serializeReq(req);
+    //std::vector<uint8_t> dataBytes = Request::serializeReq(req);
+    std::vector<uint8_t> dataBytes = req.serializeReq();
     send(clientSocket, reinterpret_cast<const char*>(dataBytes.data()), dataBytes.size(), 0);
 
-    if (req.responseLength == 0) {
+    /*if (req.getResponseLength() == 0) {
         return {};
-    }
+    }*/
 
-    std::vector<char> buffer(req.responseLength);
-    int bytesReceived = recv(clientSocket, buffer.data(), req.responseLength, 0);
+    std::vector<char> buffer(req.getResponseLength());
+    int bytesReceived = recv(clientSocket, buffer.data(), req.getResponseLength(), 0);
+    disConnectSrv();
 
     if (bytesReceived > 0) {
         std::cout << "Received from server: " << buffer[0] << std::endl;
@@ -83,7 +74,7 @@ std::vector<uint8_t> Server::sendReq(const Request& req) {
 
     std::vector<uint8_t> res(buffer.begin(), buffer.begin() + bytesReceived);
 
-    disConnectSrv();
+    
     return res;
 }
 
