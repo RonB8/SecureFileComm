@@ -2,68 +2,77 @@
 #pragma once
 
 
-#include "includeAll.hpp"
+#include "commonInc.hpp"
 
 #include <climits>
 #include <iostream>
 #include <vector>
+#include <set>
 #include "CodeFinals.hpp"
 #include <stdexcept>
 #include <cstdint>
 #include "ByteUtils.hpp"
 
+#include "Cloud.hpp"
 
-
-struct Payload {
+class Payload {
+private:
     std::vector<uint8_t> _payload;
+
+public:
     Payload();
     explicit Payload(const std::string& name);
     Payload& operator=(const std::vector<uint8_t>& payload);
     Payload(const std::string& name, const std::vector<uint8_t>& publicKey);
     Payload(uint32_t contentSize, uint32_t origFileSize, uint16_t packetNumber, uint16_t totalPackets, const std::string& fileName, const std::vector<uint8_t>& messageContent);
-    void pushUint32(uint32_t);
-    void pushUint16(uint16_t);
-    uint32_t getSize();
+    uint32_t getSize() const;
+    friend class Request;
 };
 
-struct Request {
-
-    static const uint16_t REGISTRY = 825;
-    static const uint16_t SEND_PUBLIC_KEY = 826;
-    static const uint16_t LOGIN = 827;
-    static const uint16_t SEND_FILE = 828;
-    static const uint16_t VALID_CRC = 900;
-    static const uint16_t INVALID_CRC = 901;
-    static const uint16_t FOURTH_INVALID_CRC = 902;
-
-    static const size_t C_ID_LENGTH = 16;
-    static const uint8_t DEFAULT_VERSION = 3;
-    static const size_t FILE_NAME_FIELD_LENGTH = 255;
-    static const size_t NAME_FIELD_LENGTH = 255;
-    static const size_t PUBLIC_KEY_LENGTH = 160;
-    static const size_t CONTENT_PACKET_SIZE = 16; //@@@@@@@@@@@@@@@@
-    static const size_t MAX_SENDING_ATTEMPTS = 4;
-    static const unsigned char MAX_ASCII_VALUE = 127;
-
-   
 
 
-    uint8_t _clientID[C_ID_LENGTH] = { 0 };
+
+class Request {
+public:
+    static const uint16_t REGISTRY, SEND_PUBLIC_KEY, LOGIN, SEND_FILE, VALID_CRC, INVALID_CRC, FOURTH_INVALID_CRC;
+
+    static constexpr size_t C_ID_LENGTH = 16;
+    static const size_t FILE_NAME_FIELD_LENGTH, NAME_FIELD_LENGTH, PUBLIC_KEY_LENGTH, CONTENT_PACKET_SIZE, MAX_SENDING_ATTEMPTS;
+
+    // הצהרה עבור קבועים מסוג uint8_t
+    static const uint8_t DEFAULT_VERSION;
+
+    // הצהרה עבור קבועים מסוג unsigned char
+    static const unsigned char MAX_ASCII_VALUE;
+
+
+
+    static const size_t RESPONSE_LENGTH_REGISTRY, RESPONSE_LENGTH_SEND_PUBLIC_KEY, RESPONSE_LENGTH_LOGIN, RESPONSE_LENGTH_SEND_FILE, RESPONSE_LENGTH_VALID_CRC, RESPONSE_LENGTH_FOURTH_INVALID_CRC, RESPONSE_LENGTH_INVALID_CRC;
+
+
+
+    Request(const std::vector<uint8_t>& clientID, uint8_t version, uint16_t code, uint32_t payloadSize, const struct Payload& payload);
+    void setPayload(const char& pload, std::size_t size);
+
+
+
+
+    //static std::vector<uint8_t> serializeReq(const Request& packet);
+    std::vector<uint8_t> serializeReq() const;
+
+
+
+    static bool nameValidation(const std::string& name, std::string& errorDetails);
+    size_t getResponseLength() const;
+    friend class Cloud;
+
+private:
+    std::vector<uint8_t> _clientID;
     uint8_t _version = 0;
     uint16_t _code = 0;
     uint32_t _payloadSize = 0;
     struct Payload _payload;
     size_t responseLength;
 
-    Request(const uint8_t& clientID, uint8_t version, uint16_t code, uint32_t payloadSize, const struct Payload& payload);
-    void setPayload(const char& pload, std::size_t size);
-    void setResponseLength(size_t len);
-    static std::vector<uint8_t> serializeReq(const Request& packet);
-    static bool nameValidation(const std::string& name, std::string& errorDetails);
-
-
 };
-
-
-
 
