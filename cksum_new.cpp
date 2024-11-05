@@ -465,7 +465,6 @@ unsigned long memcrc(char* b, size_t n) {
 }
 
 
-
 std::string readfile(std::string fname) {
     if (std::filesystem::exists(fname)) {
         std::filesystem::path fpath = fname;
@@ -485,7 +484,9 @@ std::string readfile(std::string fname) {
     }
 }
 
+
 unsigned long checkSum(const std::string& fname) {
+
     if (std::filesystem::exists(fname)) {
         std::filesystem::path fpath = fname;
         std::ifstream f1(fname.c_str(), std::ios::binary);
@@ -494,7 +495,6 @@ unsigned long checkSum(const std::string& fname) {
         char* b = new char[size];
         f1.seekg(0, std::ios::beg);
         f1.read(b, size);
-        //        std::cout << "tellg returns" << f1.tellg() << std::endl;
 
         return memcrc(b, size);
     }
@@ -504,9 +504,3 @@ unsigned long checkSum(const std::string& fname) {
     }
 }
 
-
-
-//int main(int argc, char** argv) {
-//    std::cout << readfile(argv[1]) << std::endl;
-//    exit(0);
-//}
