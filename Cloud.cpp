@@ -2,8 +2,9 @@
 
 
 
-Cloud::Cloud() {
+Cloud::Cloud() : server(std::make_unique<Server>()) {}
 
+Cloud::~Cloud() {
 }
 
 Response Cloud::registerName(const std::string& name) {
@@ -20,10 +21,15 @@ Response Cloud::registerName(const std::string& name) {
 
     Payload payload(name);
     Request req({}, Request::DEFAULT_VERSION, Request::REGISTRY, payload.getSize(), payload);
-    std::vector<uint8_t> resp = server.sendReq(req);
+    std::vector<uint8_t> resp = server->sendReq(req);
 
     Response response(resp);
-
+    if (response.getCode() == Response::FAILED_REGISTRATION) {
+        throw std::runtime_error("Registration failed.");
+    }
+    else if (response.getCode() != Response::SUCCESSFUL_REGISTRATION) {
+        throw std::runtime_error("An unknown code was received from the server for the registration operation.");
+    }
     return response;
 }
 
@@ -58,14 +64,17 @@ Response Cloud::sendPublicKey(const std::string& name, const std::vector<uint8_t
         IDArr[i] = ID[i];
 
     //Request req(*IDArr, DEFAULT_VERSION, SEND_PUBLIC_KEY, DEFAULT_PAYLOAD_SIZE, payload);  $$$$$$$$$$$$
-    Request req(*IDArr, Request::DEFAULT_VERSION, Request::SEND_PUBLIC_KEY, payload.getSize(), payload);
+    Request req(ID, Request::DEFAULT_VERSION, Request::SEND_PUBLIC_KEY, payload.getSize(), payload);
 
 
-    std::vector<uint8_t> resp = server.sendReq(req);
+    std::vector<uint8_t> resp = server->sendReq(req);
 
 
     Response response(resp);
 
+    if (response.getCode() != Response::PUBLIC_KEY_RECEIVED) {
+        throw std::runtime_error("An unknown code was received from the server for the public key sending.");
+    }
 
     return response;
 }
@@ -95,16 +104,22 @@ Response Cloud::login(const std::string& name, const std::vector<uint8_t>& ID) {
         IDArr[i] = ID[i];
 
     Payload payload(name);
-    Request req(*IDArr, Request::DEFAULT_VERSION, Request::LOGIN, payload.getSize(), payload);
-    std::vector<uint8_t> resp = server.sendReq(req);
+    Request req(ID, Request::DEFAULT_VERSION, Request::LOGIN, payload.getSize(), payload);
+    std::vector<uint8_t> resp = server->sendReq(req);
 
     Response response(resp);
+
+    if (response.getCode() == Response::LOGIN_DENIED) {
+        throw std::runtime_error("Login request denied, re-registration required.");
+    }
+    else if (response.getCode() != Response::LOGIN_ACCEPT) {
+        throw std::runtime_error("An unknown code was received from the server for the login operation.");
+    }
 
     return response;
 }
 
-//Divide to packets of 1kb or 4kb @@@@@@@@@@@@@@@@@@@@@@@@
-//Response Cloud::sendFile(const std::vector<uint8_t>& ID, const std::filesystem::path& filePath, const AesKey& aesKey) { $$$$$$$$$$$$$$
+
 Response Cloud::sendFile(const std::vector<uint8_t>& ID, const std::filesystem::path& filePath, const CryptoManager& cryptoManager) {
     std::cout << "Sending file...\n";
 
@@ -140,15 +155,13 @@ Response Cloud::sendFile(const std::vector<uint8_t>& ID, const std::filesystem::
 
     std::string fileName = filePath.filename().string();
 
-    std::ifstream file(filePath);
+    std::ifstream file(filePath, std::ios::binary);
     
     char ch;
     uint32_t index = 0;
     while (file.get(ch)) {
-        if (ch != '\r') {
-            content.push_back(ch);
-            index++;
-        }
+        content.push_back(ch);
+        index++;
     }
 
     origFileSize = index;
@@ -163,26 +176,33 @@ Response Cloud::sendFile(const std::vector<uint8_t>& ID, const std::filesystem::
     size_t attempts = 1;
 
     do {
-        server.disConnectSrv();
-        std::vector<uint8_t> resp = sendFileByPackets(encryptedContent, IDArr, origFileSize, fileName);
+        server->disConnectSrv();
+        std::vector<uint8_t> resp = sendFileByPackets(encryptedContent, ID, origFileSize, fileName);
         response.setPacket(resp);
 
+        if (response.getCode() != Response::VALID_FILE_ACCEPTED) {
+            throw std::runtime_error("File sending request failed.");
+        }
 
-        uint32_t respCkSum = response.getCksumAsNum();
+        uint32_t respCkSum = response.getCksum();
         if (respCkSum == ckSum) {
 
-            Request validCrcRequest(*IDArr, Request::DEFAULT_VERSION, Request::VALID_CRC, fileNamePayload.getSize(), fileNamePayload);
+            Request validCrcRequest(ID, Request::DEFAULT_VERSION, Request::VALID_CRC, fileNamePayload.getSize(), fileNamePayload);
 
-            server.disConnectSrv();
-            std::vector<uint8_t> validCrcResponse = server.sendReq(validCrcRequest);
+            server->disConnectSrv();
+            std::vector<uint8_t> validCrcResponse = server->sendReq(validCrcRequest);
             response.setPacket(validCrcResponse);
+
+            if (response.getCode() != Response::MESSAGE_RECEIVED) {
+                throw std::runtime_error("File sending request failed.");
+            }
+
             break;
         }
 
-        Request inValidCrcRequest(*IDArr, Request::DEFAULT_VERSION, Request::INVALID_CRC, fileNamePayload.getSize(), fileNamePayload);
-        server.disConnectSrv();
-        std::vector<uint8_t> inValidCrcResponse = server.sendReq(inValidCrcRequest);
-        response.setPacket(inValidCrcResponse);
+        Request inValidCrcRequest(ID, Request::DEFAULT_VERSION, Request::INVALID_CRC, fileNamePayload.getSize(), fileNamePayload);
+        server->disConnectSrv();
+        std::vector<uint8_t> inValidCrcResponse = server->sendReq(inValidCrcRequest);
 
         attempts++;
     } while (attempts < Request::MAX_SENDING_ATTEMPTS);
@@ -190,24 +210,22 @@ Response Cloud::sendFile(const std::vector<uint8_t>& ID, const std::filesystem::
     if (attempts == 4) {
         errorMessages += "CRC verification failed, file sending failed\n";
         std::cerr << errorMessages;
-        Request fourthInValidCrcReq(*IDArr, Request::DEFAULT_VERSION, Request::FOURTH_INVALID_CRC, 256, fileNamePayload);
-        server.disConnectSrv();
-        std::vector<uint8_t> fourthInValidCrcResp = server.sendReq(fourthInValidCrcReq);
+        Request fourthInValidCrcReq(ID, Request::DEFAULT_VERSION, Request::FOURTH_INVALID_CRC, fileNamePayload.getSize(), fileNamePayload);
+        server->disConnectSrv();
+        std::vector<uint8_t> fourthInValidCrcResp = server->sendReq(fourthInValidCrcReq);
         response.setPacket(fourthInValidCrcResp);
+
+        if (response.getCode() != Response::MESSAGE_RECEIVED) {
+            throw std::runtime_error("An error occurred while sending the file.");
+        }
+
     }
 
     return response;
 }
 
-std::vector<uint8_t> Cloud::sendFileByPackets(const std::vector<uint8_t>& content, const uint8_t IDArr[], uint32_t origFileSize, const std::string& fileName)
+std::vector<uint8_t> Cloud::sendFileByPackets(const std::vector<uint8_t>& content, const std::vector<uint8_t>& ID, uint32_t origFileSize, const std::string& fileName)
 {
-
-    std::cout << "\n\n\nencrypted content:\n";
-    
-    printVector(content);
-    std::cout << "\n\n\n";
-
-
     uint32_t contentSize = content.size();
     uint32_t totalPackets = std::ceil((double)contentSize / Request::CONTENT_PACKET_SIZE);
     uint32_t packetNumber = 1;
@@ -215,25 +233,23 @@ std::vector<uint8_t> Cloud::sendFileByPackets(const std::vector<uint8_t>& conten
 
     while (packetNumber < totalPackets) {
         std::vector<uint8_t> currPacket = getSubVector(content, index * Request::CONTENT_PACKET_SIZE, index * Request::CONTENT_PACKET_SIZE + Request::CONTENT_PACKET_SIZE);
-        //payloadSize = contentStartIndex + currPacket.size();
-
 
 
         Payload payload(contentSize, origFileSize, packetNumber, totalPackets, fileName, currPacket);
 
 
 
-        Request req(*IDArr, Request::DEFAULT_VERSION, Request::SEND_FILE, payload.getSize(), payload);
-        req.setResponseLength(0); //There is no excpected response
-        server.sendReq(req);
+        Request req(ID, Request::DEFAULT_VERSION, Request::SEND_FILE, payload.getSize(), payload);
+        server->disConnectSrv();
+        server->sendReq(req);
         packetNumber++;
         index++;
     }
 
     std::vector<uint8_t> currPacket(content.begin() + index * Request::CONTENT_PACKET_SIZE, content.end());
     Payload payload(contentSize, origFileSize, packetNumber, totalPackets, fileName, currPacket);
-    Request req(*IDArr, Request::DEFAULT_VERSION, Request::SEND_FILE, payload.getSize(), payload);
-    std::vector<uint8_t> response = server.sendReq(req);
+    Request req(ID, Request::DEFAULT_VERSION, Request::SEND_FILE, payload.getSize(), payload);
+    std::vector<uint8_t> response = server->sendReq(req);
     return response;
 }
 
