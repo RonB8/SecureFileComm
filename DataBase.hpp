@@ -1,9 +1,6 @@
 #pragma once
 
-#include "includeAll.hpp"
-
-
-//#include "common.hpp"
+#include "commonInc.hpp"
 #include <winsock.h>
 #include <iostream>
 #include <vector>
@@ -20,12 +17,13 @@
 
 
 class DataBase {
-
-public:
+private:
     std::string userInfoFile;
     std::string transferFile;
     std::string privKeyFile;
 
+public:
+    
     DataBase();
     bool userExist();
     bool extractTransferInfo(std::string& ipAddress, u_short& port, std::string& userName, std::string& filePath);
