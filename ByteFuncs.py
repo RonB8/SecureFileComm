@@ -11,5 +11,5 @@ def push_as_n_bytes(arr: bytes, number, num_bytes: int) -> None:
 
 
 def unpad(data: bytes) -> bytes:
-    padding_len = data[-1]  # הערך האחרון הוא גודל הריפוד
+    padding_len = data[-1]  # The last value is the padding length
     return data[:-padding_len]
