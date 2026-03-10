@@ -16,6 +16,80 @@ The system ensures confidentiality and integrity by exchanging encryption keys u
 * **Multi-Client Support:** The server handles multiple clients concurrently using Python's `threading` module.
 * **Persistent Database:** Utilizes an SQLite database (`defensive.db`) to store user information, encryption keys, and file metadata, allowing seamless recovery and reconnection.
 
+## Component Architecture
+```mermaid
+graph TB
+    subgraph Client ["Client Side (C++17)"]
+        direction TB
+        MainC["Main Application"]
+        Cloud["Cloud Manager (Winsock)"]
+        CryptoC["CryptoManager (Crypto++)<br/>RSA & AES"]
+        LocalFiles["Local Storage<br/>(transfer.info, me.info, priv.key)"]
+
+        MainC --> Cloud
+        MainC --> CryptoC
+        MainC --> LocalFiles
+    end
+
+    subgraph Server ["Server Side (Python 3.12)"]
+        direction TB
+        MainS["Server Core<br/>(Sockets & Threads)"]
+        ReqHandler["RequestHandler & Parser"]
+        CryptoS["CryptoManager (PyCryptodome)<br/>AES Gen & RSA"]
+        DBManager["Database Manager"]
+        
+        SQLite[("SQLite DB<br/>(defensive.db)")]
+        ServerDisk["File System<br/>(client_files/)"]
+
+        MainS --> ReqHandler
+        ReqHandler --> CryptoS
+        ReqHandler --> DBManager
+        DBManager --> SQLite
+        DBManager --> ServerDisk
+    end
+
+    Cloud <-->|"TCP Custom Binary Protocol"| MainS
+```
+## Sequence Diagram
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Client (C++)
+    participant S as Server (Python)
+    
+    Note over C,S: Phase 1: Registration
+    C->>S: Registration Request (Name)
+    S->>S: Generate UUID & Save to DB
+    S-->>C: Accept + Client ID (UUID)
+    
+    Note over C,S: Phase 2: Key Exchange
+    C->>C: Generate RSA Key Pair
+    C->>S: Send RSA Public Key
+    S->>S: Generate AES Key
+    S->>S: Encrypt AES Key with RSA Public Key
+    S-->>C: Send Encrypted AES Key
+    
+    Note over C,S: Phase 3: Secure File Transfer
+    C->>C: Decrypt AES Key (using RSA Private Key)
+    C->>C: Encrypt File with AES Key
+    C->>S: Send Encrypted File (Chunked Packets)
+    
+    S->>S: Decrypt File with AES Key
+    S->>S: Calculate File Checksum (CRC)
+    S-->>C: Send Checksum to Client
+    
+    Note over C,S: Phase 4: Verification
+    C->>C: Calculate Local Checksum
+    alt Checksums Match
+        C->>S: Valid CRC (Success)
+        S->>S: Mark File as Verified in DB
+        S-->>C: Acknowledge
+    else Checksums Mismatch
+        C->>S: Invalid CRC (Request Retry - up to 3 times)
+        S-->>C: Pong (Ready for retry)
+    end
+```
+
 ## 🛠️ System Requirements
 
 ### Server
