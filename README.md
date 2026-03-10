@@ -34,3 +34,54 @@ The system ensures confidentiality and integrity by exchanging encryption keys u
 Ensure Python 3.12 is installed, then install the required cryptographic library:
 ```bash
 pip install pycryptodome
+```
+
+Create a port.info file in the same directory as the server code. It should contain the port number the server will listen on. If this file is missing, the server defaults to port 1256.
+
+Example port.info:
+```plaintext
+1234
+```
+Run the server:
+```bash
+python main.py
+```
+### 2. Client Setup
+1. Open the project in Visual Studio 2022 and ensure C++17 is enabled.
+
+2. Link the Crypto++ library to your project.
+
+3. Create a transfer.info file in the directory of the executable (.exe). This file contains the server connection details and the file you wish to send.
+
+Example transfer.info:
+```
+127.0.0.1:1234
+John Doe
+my_secret_file.txt
+```
+
+Compile and run the client. The client will automatically register, exchange keys, and securely upload my_secret_file.txt.
+
+## 🔄 Protocol Overview
+The system uses a strict Little-Endian Binary Protocol over TCP.
+
+1. **Registration (Request 825):** Clients register with a username and receive a unique 16-byte UUID.
+
+2. **Public Key Exchange (Request 826):** Clients generate an RSA key pair and send their public key to the server. The server responds with an
+   AES key encrypted via the client's RSA public key.
+
+3. **File Transfer (Request 828):** Clients encrypt files using the AES key and transmit them in chunks.
+
+4. **Validation (Request 900/901/902):** The server calculates the CRC of the decrypted file and verifies it against the client's expected CRC.
+
+5. **Reconnection (Request 827):** Returning clients can bypass RSA generation by securely authenticating their existing UUID.
+
+## 🗄️ Database Architecture
+The Python server uses an SQLite database (defensive.db) containing two primary tables:
+
+* **clients:** Stores ID (UUID), Name, PublicKey, LastSeen, and AESKey.
+
+* **files:** Tracks uploaded files, associating them with the client's ID, FileName, PathName, and Verified status.
+
+## 📜 License
+This project was created for educational purposes as part of an academic curriculum.
