@@ -28,3 +28,4 @@ inline void pushUintToBuffer(std::vector<uint8_t>& buffer, uint32_t value, size_
 inline std::vector<uint8_t> getSubVector(const std::vector<uint8_t>& vec, size_t start, size_t end) {
     return std::vector<uint8_t>(vec.begin() + start, vec.begin() + end);
 }
+
