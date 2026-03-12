@@ -11,14 +11,13 @@ int main() {
 
     DataBase dataBase;
     
-    Cloud cloud1;
-    
     Response response1;
 
     CryptoManager cryptoManager;
     u_short port;
     std::string name, host, filePathStr;
     dataBase.extractTransferInfo(host, port, name, filePathStr);
+    Cloud cloud1(port);
 
     std::filesystem::path filePath(filePathStr);
 
@@ -43,7 +42,6 @@ int main() {
         dataBase.writeUserDetailsToFile(name, cID, privateKey);
 
         dataBase.savePrivateKey(privateKey1);
-        return 5;
     }
     else {
         std::string tName;
