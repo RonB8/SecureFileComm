@@ -24,7 +24,7 @@ private:
     std::unique_ptr<Server> server;
 
 public:    
-    Cloud();
+    Cloud(u_short& port);
     ~Cloud();
     Response registerName(const std::string& name);
     Response login(const std::string& name, const std::vector<uint8_t>& ID);
