@@ -2,7 +2,7 @@
 
 
 
-Cloud::Cloud() : server(std::make_unique<Server>()) {}
+Cloud::Cloud(u_short& port) : server(std::make_unique<Server>(port)) {}
 
 Cloud::~Cloud() {
 }
