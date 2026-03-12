@@ -1,6 +1,9 @@
 #include "Server.hpp"
 #include "Request.hpp"
 
+Server::Server(u_short& port) {
+    this->port = port;
+}
 
 void Server::initializeWinSock() {
     //Initialize the winsock
@@ -10,7 +13,7 @@ void Server::initializeWinSock() {
         return;
     }
 
-    port = 1234;
+    //port = 1234;
     const char* host = "127.0.0.1";
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(port);
