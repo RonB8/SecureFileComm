@@ -19,8 +19,8 @@ public:
     void initializeWinSock();
 
 
-   /* Server() {}
-    ~Server();*/
+    Server(u_short& port);
+    // ~Server();
    
     void connectSrv();
     void disConnectSrv();
