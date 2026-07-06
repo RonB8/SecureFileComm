@@ -1,4 +1,4 @@
-### Link to new version: https://github.com/RonB8/SecureFileComm-py
+### Link to the new version: https://github.com/RonB8/SecureFileComm-py
 
 # SecureFileComm 🛡️
 
